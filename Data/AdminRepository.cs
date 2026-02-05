@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+using System.Data.SQLite;
 using GoWheelsConsole.Models;
 
 namespace GoWheelsConsole.Data;
@@ -75,5 +75,26 @@ public class AdminRepository
         cmd.CommandText = "DELETE FROM Admins WHERE Id = " + id;
         cmd.ExecuteNonQuery();
         conn.Close();
+    }
+
+    public Admin GetByUsername(string username)
+    {
+        var conn = DatabaseHelper.GetConnection();
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT Id, Username, Email, Password FROM Admins WHERE Username = '{username}'";
+        var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            var a = new Admin();
+            a.Id = reader.GetInt32(0);
+            a.Username = reader.GetString(1);
+            a.Email = reader.GetString(2);
+            a.Password = reader.GetString(3);
+            conn.Close();
+            return a;
+        }
+        conn.Close();
+        return null;
     }
 }

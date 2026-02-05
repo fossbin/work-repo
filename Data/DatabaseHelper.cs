@@ -1,14 +1,14 @@
-using Microsoft.Data.Sqlite;
+using System.Data.SQLite;
 
 namespace GoWheelsConsole.Data;
 
 public class DatabaseHelper
 {
-    static string connectionString = "Data Source=gowheels.db";
+    static string connectionString = "Data Source=gowheels.db;Version=3;";
 
-    public static SqliteConnection GetConnection()
+    public static SQLiteConnection GetConnection()
     {
-        return new SqliteConnection(connectionString);
+        return new SQLiteConnection(connectionString);
     }
 
     public static void InitializeDatabase()

@@ -9,6 +9,8 @@ class Program
     static VehicleRepository vehicleRepo = new VehicleRepository();
     static BookingRepository bookingRepo = new BookingRepository();
     static AdminRepository adminRepo = new AdminRepository();
+    static User currentUser = null;
+    static Admin currentAdmin = null;
 
     static void Main(string[] args)
     {
@@ -17,11 +19,212 @@ class Program
         while (true)
         {
             Console.WriteLine("\n=== GOWHEELS MENU ===");
+            Console.WriteLine("1. User Login");
+            Console.WriteLine("2. User Registration");
+            Console.WriteLine("3. Admin Login");
+            Console.WriteLine("4. Exit");
+            Console.Write("Choice: ");
+            var choice = Console.ReadLine();
+
+            if (choice == "1") UserLogin();
+            else if (choice == "2") UserRegistration();
+            else if (choice == "3") AdminLogin();
+            else if (choice == "4") break;
+        }
+    }
+
+    // ========== USER REGISTRATION ==========
+    static void UserRegistration()
+    {
+        Console.WriteLine("\n--- USER REGISTRATION ---");
+        Console.Write("First Name: ");
+        var firstName = Console.ReadLine();
+        Console.Write("Last Name: ");
+        var lastName = Console.ReadLine();
+        Console.Write("Email: ");
+        var email = Console.ReadLine();
+        Console.Write("Password: ");
+        var password = Console.ReadLine();
+
+        var existingUser = userRepo.GetByEmail(email);
+        if (existingUser != null)
+        {
+            Console.WriteLine("Error: Email already exists!");
+            return;
+        }
+
+        var user = new User();
+        user.FirstName = firstName;
+        user.LastName = lastName;
+        user.Email = email;
+        user.Password = password;
+        userRepo.Add(user);
+        Console.WriteLine("Registration successful!");
+    }
+
+    // ========== USER LOGIN ==========
+    static void UserLogin()
+    {
+        Console.WriteLine("\n--- USER LOGIN ---");
+        Console.Write("Email: ");
+        var email = Console.ReadLine();
+        Console.Write("Password: ");
+        var password = Console.ReadLine();
+
+        var user = userRepo.GetByEmail(email);
+        if (user == null || user.Password != password)
+        {
+            Console.WriteLine("Invalid email or password!");
+            return;
+        }
+
+        currentUser = user;
+        Console.WriteLine($"Welcome, {user.FirstName}!");
+        UserDashboard();
+    }
+
+    // ========== ADMIN LOGIN ==========
+    static void AdminLogin()
+    {
+        Console.WriteLine("\n--- ADMIN LOGIN ---");
+        Console.Write("Username: ");
+        var username = Console.ReadLine();
+        Console.Write("Password: ");
+        var password = Console.ReadLine();
+
+        var admin = adminRepo.GetByUsername(username);
+        if (admin == null || admin.Password != password)
+        {
+            Console.WriteLine("Invalid username or password!");
+            return;
+        }
+
+        currentAdmin = admin;
+        Console.WriteLine($"Welcome, {admin.Username}!");
+        AdminDashboard();
+    }
+
+    // ========== USER DASHBOARD ==========
+    static void UserDashboard()
+    {
+        while (currentUser != null)
+        {
+            Console.WriteLine("\n--- USER DASHBOARD ---");
+            Console.WriteLine("1. Browse Vehicles");
+            Console.WriteLine("2. My Bookings");
+            Console.WriteLine("3. Create Booking");
+            Console.WriteLine("4. Cancel Booking");
+            Console.WriteLine("5. Logout");
+            Console.Write("Choice: ");
+            var choice = Console.ReadLine();
+
+            if (choice == "1") BrowseVehicles();
+            else if (choice == "2") MyBookings();
+            else if (choice == "3") CreateBooking();
+            else if (choice == "4") CancelBooking();
+            else if (choice == "5")
+            {
+                currentUser = null;
+                Console.WriteLine("Logged out successfully!");
+            }
+        }
+    }
+
+    static void BrowseVehicles()
+    {
+        Console.WriteLine("\n--- AVAILABLE VEHICLES ---");
+        var vehicles = vehicleRepo.GetAvailable();
+        foreach (var v in vehicles)
+            Console.WriteLine($"[{v.Id}] {v.Name} ({v.Type}) | Rs.{v.PricePerDay}/day | {v.VehicleNumber}");
+    }
+
+    static void MyBookings()
+    {
+        Console.WriteLine("\n--- MY BOOKINGS ---");
+        var bookings = bookingRepo.GetByUserId(currentUser.Id);
+        foreach (var b in bookings)
+        {
+            int days = (b.EndDate - b.StartDate).Days + 1;
+            Console.WriteLine($"[{b.Id}] {b.VehicleName} | {b.StartDate:dd MMM} to {b.EndDate:dd MMM} ({days} days) | Rs.{b.TotalCost}");
+        }
+    }
+
+    static void CreateBooking()
+    {
+        Console.WriteLine("\n--- CREATE BOOKING ---");
+        Console.WriteLine("Available Vehicles:");
+        var vehicles = vehicleRepo.GetAvailable();
+        foreach (var v in vehicles)
+            Console.WriteLine($"[{v.Id}] {v.Name} ({v.Type}) | Rs.{v.PricePerDay}/day");
+
+        Console.Write("Vehicle ID: ");
+        int vehicleId = int.Parse(Console.ReadLine());
+        var vehicle = vehicleRepo.GetById(vehicleId);
+
+        if (vehicle == null || vehicle.Status != "Available")
+        {
+            Console.WriteLine("Vehicle not available!");
+            return;
+        }
+
+        Console.Write("Start Date (yyyy-mm-dd): ");
+        DateTime startDate = DateTime.Parse(Console.ReadLine());
+        Console.Write("End Date (yyyy-mm-dd): ");
+        DateTime endDate = DateTime.Parse(Console.ReadLine());
+        Console.Write("Pickup Location: ");
+        string pickup = Console.ReadLine();
+
+        int days = (endDate - startDate).Days + 1;
+        decimal total = days * vehicle.PricePerDay + 500;
+
+        var booking = new Booking();
+        booking.UserId = currentUser.Id;
+        booking.VehicleId = vehicleId;
+        booking.StartDate = startDate;
+        booking.EndDate = endDate;
+        booking.PickupLocation = pickup;
+        booking.TotalCost = total;
+
+        bookingRepo.Add(booking);
+        vehicleRepo.UpdateStatus(vehicleId, "Lent");
+        Console.WriteLine($"Booking created. Total: Rs.{total}");
+    }
+
+    static void CancelBooking()
+    {
+        Console.WriteLine("\n--- CANCEL BOOKING ---");
+        Console.Write("Enter Booking ID: ");
+        int id = int.Parse(Console.ReadLine());
+        var booking = bookingRepo.GetById(id);
+        
+        if (booking == null)
+        {
+            Console.WriteLine("Booking not found!");
+            return;
+        }
+
+        if (booking.UserId != currentUser.Id)
+        {
+            Console.WriteLine("You can only cancel your own bookings!");
+            return;
+        }
+
+        bookingRepo.Delete(id);
+        vehicleRepo.UpdateStatus(booking.VehicleId, "Available");
+        Console.WriteLine("Booking cancelled.");
+    }
+
+    // ========== ADMIN DASHBOARD ==========
+    static void AdminDashboard()
+    {
+        while (currentAdmin != null)
+        {
+            Console.WriteLine("\n--- ADMIN DASHBOARD ---");
             Console.WriteLine("1. Vehicles");
             Console.WriteLine("2. Users");
             Console.WriteLine("3. Admins");
             Console.WriteLine("4. Bookings");
-            Console.WriteLine("5. Exit");
+            Console.WriteLine("5. Logout");
             Console.Write("Choice: ");
             var choice = Console.ReadLine();
 
@@ -29,7 +232,11 @@ class Program
             else if (choice == "2") UsersMenu();
             else if (choice == "3") AdminsMenu();
             else if (choice == "4") BookingsMenu();
-            else if (choice == "5") break;
+            else if (choice == "5")
+            {
+                currentAdmin = null;
+                Console.WriteLine("Logged out successfully!");
+            }
         }
     }
 

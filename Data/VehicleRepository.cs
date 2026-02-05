@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+using System.Data.SQLite;
 using GoWheelsConsole.Models;
 
 namespace GoWheelsConsole.Data;
