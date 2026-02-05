@@ -5,830 +5,286 @@ namespace GoWheelsConsole;
 
 class Program
 {
-    private static readonly UserRepository _userRepo = new();
-    private static readonly VehicleRepository _vehicleRepo = new();
-    private static readonly BookingRepository _bookingRepo = new();
-    private static readonly AdminRepository _adminRepo = new();
+    static UserRepository userRepo = new UserRepository();
+    static VehicleRepository vehicleRepo = new VehicleRepository();
+    static BookingRepository bookingRepo = new BookingRepository();
+    static AdminRepository adminRepo = new AdminRepository();
 
     static void Main(string[] args)
     {
-        Console.Title = "GoWheels - Vehicle Rental Management System";
-        
-        // Initialize database
         DatabaseHelper.InitializeDatabase();
 
         while (true)
         {
-            ShowMainMenu();
-            var choice = GetUserInput("Enter your choice: ");
+            Console.WriteLine("\n=== GOWHEELS MENU ===");
+            Console.WriteLine("1. Vehicles");
+            Console.WriteLine("2. Users");
+            Console.WriteLine("3. Admins");
+            Console.WriteLine("4. Bookings");
+            Console.WriteLine("5. Exit");
+            Console.Write("Choice: ");
+            var choice = Console.ReadLine();
 
-            switch (choice)
-            {
-                case "1":
-                    VehiclesMenu();
-                    break;
-                case "2":
-                    UsersMenu();
-                    break;
-                case "3":
-                    AdminsMenu();
-                    break;
-                case "4":
-                    BookingsMenu();
-                    break;
-                case "5":
-                    Console.WriteLine("\nThank you for using GoWheels! Goodbye.");
-                    return;
-                default:
-                    Console.WriteLine("\nInvalid choice. Please try again.");
-                    break;
-            }
+            if (choice == "1") VehiclesMenu();
+            else if (choice == "2") UsersMenu();
+            else if (choice == "3") AdminsMenu();
+            else if (choice == "4") BookingsMenu();
+            else if (choice == "5") break;
         }
     }
 
-    static void ShowMainMenu()
-    {
-        SafeClear();
-        Console.WriteLine("╔══════════════════════════════════════════════╗");
-        Console.WriteLine("║     GOWHEELS - Vehicle Rental Management     ║");
-        Console.WriteLine("╠══════════════════════════════════════════════╣");
-        Console.WriteLine("║  1. Vehicles Management                      ║");
-        Console.WriteLine("║  2. Users Management                         ║");
-        Console.WriteLine("║  3. Admins Management                        ║");
-        Console.WriteLine("║  4. Bookings Management                      ║");
-        Console.WriteLine("║  5. Exit                                     ║");
-        Console.WriteLine("╚══════════════════════════════════════════════╝");
-    }
-
-    #region Vehicles Menu
-
+    // ========== VEHICLES ==========
     static void VehiclesMenu()
     {
         while (true)
         {
-            SafeClear();
-            Console.WriteLine("╔══════════════════════════════════════════════╗");
-            Console.WriteLine("║           VEHICLES MANAGEMENT                ║");
-            Console.WriteLine("╠══════════════════════════════════════════════╣");
-            Console.WriteLine("║  1. List All Vehicles                        ║");
-            Console.WriteLine("║  2. Add New Vehicle                          ║");
-            Console.WriteLine("║  3. Edit Vehicle                             ║");
-            Console.WriteLine("║  4. Delete Vehicle                           ║");
-            Console.WriteLine("║  5. Back to Main Menu                        ║");
-            Console.WriteLine("╚══════════════════════════════════════════════╝");
+            Console.WriteLine("\n--- VEHICLES ---");
+            Console.WriteLine("1. List");
+            Console.WriteLine("2. Add");
+            Console.WriteLine("3. Edit");
+            Console.WriteLine("4. Delete");
+            Console.WriteLine("5. Back");
+            Console.Write("Choice: ");
+            var choice = Console.ReadLine();
 
-            var choice = GetUserInput("Enter your choice: ");
-
-            switch (choice)
+            if (choice == "1")
             {
-                case "1":
-                    ListVehicles();
-                    break;
-                case "2":
-                    AddVehicle();
-                    break;
-                case "3":
-                    EditVehicle();
-                    break;
-                case "4":
-                    DeleteVehicle();
-                    break;
-                case "5":
-                    return;
-                default:
-                    Console.WriteLine("Invalid choice. Please try again.");
-                    break;
+                var vehicles = vehicleRepo.GetAll();
+                foreach (var v in vehicles)
+                    Console.WriteLine($"[{v.Id}] {v.Name} ({v.Type}) | Rs.{v.PricePerDay}/day | {v.VehicleNumber} | {v.Status}");
             }
-            Pause();
-        }
-    }
-
-    static void ListVehicles()
-    {
-        SafeClear();
-        Console.WriteLine("\n═══ ALL VEHICLES ═══\n");
-        var vehicles = _vehicleRepo.GetAll();
-        if (vehicles.Count == 0)
-        {
-            Console.WriteLine("No vehicles found.");
-            return;
-        }
-        foreach (var vehicle in vehicles)
-        {
-            Console.WriteLine(vehicle);
-        }
-    }
-
-    static void AddVehicle()
-    {
-        SafeClear();
-        Console.WriteLine("\n═══ ADD NEW VEHICLE ═══\n");
-
-        var vehicle = new Vehicle
-        {
-            Name = GetUserInput("Vehicle Name (e.g., Honda City): "),
-            Type = GetVehicleType(),
-            PricePerDay = GetDecimalInput("Price Per Day (₹): "),
-            VehicleNumber = GetUserInput("Vehicle Number (e.g., KA01AB1234): "),
-            Status = GetVehicleStatus(),
-            Description = GetUserInput("Description (optional): ")
-        };
-
-        try
-        {
-            _vehicleRepo.Add(vehicle);
-            Console.WriteLine("\n✓ Vehicle added successfully!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"\n✗ Error adding vehicle: {ex.Message}");
-        }
-    }
-
-    static void EditVehicle()
-    {
-        SafeClear();
-        ListVehicles();
-        Console.WriteLine();
-
-        var id = GetIntInput("Enter Vehicle ID to edit: ");
-        var vehicle = _vehicleRepo.GetById(id);
-
-        if (vehicle == null)
-        {
-            Console.WriteLine("Vehicle not found.");
-            return;
-        }
-
-        Console.WriteLine($"\nEditing: {vehicle.Name}");
-        Console.WriteLine("(Press Enter to keep current value)\n");
-
-        var name = GetUserInput($"Vehicle Name [{vehicle.Name}]: ");
-        if (!string.IsNullOrWhiteSpace(name)) vehicle.Name = name;
-
-        Console.WriteLine($"Current Type: {vehicle.Type}");
-        var changeType = GetUserInput("Change type? (y/n): ");
-        if (changeType.ToLower() == "y") vehicle.Type = GetVehicleType();
-
-        var priceStr = GetUserInput($"Price Per Day [{vehicle.PricePerDay}]: ");
-        if (!string.IsNullOrWhiteSpace(priceStr) && decimal.TryParse(priceStr, out var price))
-            vehicle.PricePerDay = price;
-
-        var number = GetUserInput($"Vehicle Number [{vehicle.VehicleNumber}]: ");
-        if (!string.IsNullOrWhiteSpace(number)) vehicle.VehicleNumber = number;
-
-        Console.WriteLine($"Current Status: {vehicle.Status}");
-        var changeStatus = GetUserInput("Change status? (y/n): ");
-        if (changeStatus.ToLower() == "y") vehicle.Status = GetVehicleStatus();
-
-        var desc = GetUserInput($"Description [{vehicle.Description}]: ");
-        if (!string.IsNullOrWhiteSpace(desc)) vehicle.Description = desc;
-
-        try
-        {
-            _vehicleRepo.Update(vehicle);
-            Console.WriteLine("\n✓ Vehicle updated successfully!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"\n✗ Error updating vehicle: {ex.Message}");
-        }
-    }
-
-    static void DeleteVehicle()
-    {
-        SafeClear();
-        ListVehicles();
-        Console.WriteLine();
-
-        var id = GetIntInput("Enter Vehicle ID to delete: ");
-        var vehicle = _vehicleRepo.GetById(id);
-
-        if (vehicle == null)
-        {
-            Console.WriteLine("Vehicle not found.");
-            return;
-        }
-
-        var confirm = GetUserInput($"Are you sure you want to delete '{vehicle.Name}'? (y/n): ");
-        if (confirm.ToLower() == "y")
-        {
-            try
+            else if (choice == "2")
             {
-                _vehicleRepo.Delete(id);
-                Console.WriteLine("\n✓ Vehicle deleted successfully!");
+                var vehicle = new Vehicle();
+                Console.Write("Name: "); vehicle.Name = Console.ReadLine();
+                Console.Write("Type (Car/Bike/Scooter/SUV): "); vehicle.Type = Console.ReadLine();
+                Console.Write("Price Per Day: "); vehicle.PricePerDay = decimal.Parse(Console.ReadLine());
+                Console.Write("Vehicle Number: "); vehicle.VehicleNumber = Console.ReadLine();
+                Console.Write("Status (Available/Lent/Disabled): "); vehicle.Status = Console.ReadLine();
+                Console.Write("Description: "); vehicle.Description = Console.ReadLine();
+                vehicleRepo.Add(vehicle);
+                Console.WriteLine("Vehicle added.");
             }
-            catch (Exception ex)
+            else if (choice == "3")
             {
-                Console.WriteLine($"\n✗ Error deleting vehicle: {ex.Message}");
+                Console.Write("Enter Vehicle ID: ");
+                int id = int.Parse(Console.ReadLine());
+                var vehicle = vehicleRepo.GetById(id);
+                if (vehicle == null) { Console.WriteLine("Not found."); continue; }
+                
+                Console.Write($"Name [{vehicle.Name}]: "); var name = Console.ReadLine();
+                if (name != "") vehicle.Name = name;
+                Console.Write($"Type [{vehicle.Type}]: "); var type = Console.ReadLine();
+                if (type != "") vehicle.Type = type;
+                Console.Write($"Price [{vehicle.PricePerDay}]: "); var price = Console.ReadLine();
+                if (price != "") vehicle.PricePerDay = decimal.Parse(price);
+                Console.Write($"Status [{vehicle.Status}]: "); var status = Console.ReadLine();
+                if (status != "") vehicle.Status = status;
+                vehicleRepo.Update(vehicle);
+                Console.WriteLine("Vehicle updated.");
             }
+            else if (choice == "4")
+            {
+                Console.Write("Enter Vehicle ID: ");
+                int id = int.Parse(Console.ReadLine());
+                vehicleRepo.Delete(id);
+                Console.WriteLine("Vehicle deleted.");
+            }
+            else if (choice == "5") break;
         }
-        else
-        {
-            Console.WriteLine("Delete cancelled.");
-        }
     }
 
-    static string GetVehicleType()
-    {
-        Console.WriteLine("Select Vehicle Type:");
-        Console.WriteLine("  1. Car");
-        Console.WriteLine("  2. Bike");
-        Console.WriteLine("  3. Scooter");
-        Console.WriteLine("  4. SUV");
-        var choice = GetUserInput("Enter choice: ");
-        return choice switch
-        {
-            "1" => "Car",
-            "2" => "Bike",
-            "3" => "Scooter",
-            "4" => "SUV",
-            _ => "Car"
-        };
-    }
-
-    static string GetVehicleStatus()
-    {
-        Console.WriteLine("Select Status:");
-        Console.WriteLine("  1. Available");
-        Console.WriteLine("  2. Lent");
-        Console.WriteLine("  3. Disabled");
-        var choice = GetUserInput("Enter choice: ");
-        return choice switch
-        {
-            "1" => "Available",
-            "2" => "Lent",
-            "3" => "Disabled",
-            _ => "Available"
-        };
-    }
-
-    #endregion
-
-    #region Users Menu
-
+    // ========== USERS ==========
     static void UsersMenu()
     {
         while (true)
         {
-            SafeClear();
-            Console.WriteLine("╔══════════════════════════════════════════════╗");
-            Console.WriteLine("║             USERS MANAGEMENT                 ║");
-            Console.WriteLine("╠══════════════════════════════════════════════╣");
-            Console.WriteLine("║  1. List All Users                           ║");
-            Console.WriteLine("║  2. Add New User                             ║");
-            Console.WriteLine("║  3. Edit User                                ║");
-            Console.WriteLine("║  4. Delete User                              ║");
-            Console.WriteLine("║  5. Back to Main Menu                        ║");
-            Console.WriteLine("╚══════════════════════════════════════════════╝");
+            Console.WriteLine("\n--- USERS ---");
+            Console.WriteLine("1. List");
+            Console.WriteLine("2. Add");
+            Console.WriteLine("3. Edit");
+            Console.WriteLine("4. Delete");
+            Console.WriteLine("5. Back");
+            Console.Write("Choice: ");
+            var choice = Console.ReadLine();
 
-            var choice = GetUserInput("Enter your choice: ");
-
-            switch (choice)
+            if (choice == "1")
             {
-                case "1":
-                    ListUsers();
-                    break;
-                case "2":
-                    AddUser();
-                    break;
-                case "3":
-                    EditUser();
-                    break;
-                case "4":
-                    DeleteUser();
-                    break;
-                case "5":
-                    return;
-                default:
-                    Console.WriteLine("Invalid choice. Please try again.");
-                    break;
+                var users = userRepo.GetAll();
+                foreach (var u in users)
+                    Console.WriteLine($"[{u.Id}] {u.FirstName} {u.LastName} | {u.Email}");
             }
-            Pause();
-        }
-    }
-
-    static void ListUsers()
-    {
-        SafeClear();
-        Console.WriteLine("\n═══ ALL USERS ═══\n");
-        var users = _userRepo.GetAll();
-        if (users.Count == 0)
-        {
-            Console.WriteLine("No users found.");
-            return;
-        }
-        foreach (var user in users)
-        {
-            Console.WriteLine(user);
-        }
-    }
-
-    static void AddUser()
-    {
-        SafeClear();
-        Console.WriteLine("\n═══ ADD NEW USER ═══\n");
-
-        var user = new User
-        {
-            FirstName = GetUserInput("First Name: "),
-            LastName = GetUserInput("Last Name: "),
-            Email = GetUserInput("Email: "),
-            Password = GetUserInput("Password: ")
-        };
-
-        try
-        {
-            _userRepo.Add(user);
-            Console.WriteLine("\n✓ User added successfully!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"\n✗ Error adding user: {ex.Message}");
-        }
-    }
-
-    static void EditUser()
-    {
-        SafeClear();
-        ListUsers();
-        Console.WriteLine();
-
-        var id = GetIntInput("Enter User ID to edit: ");
-        var user = _userRepo.GetById(id);
-
-        if (user == null)
-        {
-            Console.WriteLine("User not found.");
-            return;
-        }
-
-        Console.WriteLine($"\nEditing: {user.FirstName} {user.LastName}");
-        Console.WriteLine("(Press Enter to keep current value)\n");
-
-        var firstName = GetUserInput($"First Name [{user.FirstName}]: ");
-        if (!string.IsNullOrWhiteSpace(firstName)) user.FirstName = firstName;
-
-        var lastName = GetUserInput($"Last Name [{user.LastName}]: ");
-        if (!string.IsNullOrWhiteSpace(lastName)) user.LastName = lastName;
-
-        var email = GetUserInput($"Email [{user.Email}]: ");
-        if (!string.IsNullOrWhiteSpace(email)) user.Email = email;
-
-        var password = GetUserInput($"Password [hidden]: ");
-        if (!string.IsNullOrWhiteSpace(password)) user.Password = password;
-
-        try
-        {
-            _userRepo.Update(user);
-            Console.WriteLine("\n✓ User updated successfully!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"\n✗ Error updating user: {ex.Message}");
-        }
-    }
-
-    static void DeleteUser()
-    {
-        SafeClear();
-        ListUsers();
-        Console.WriteLine();
-
-        var id = GetIntInput("Enter User ID to delete: ");
-        var user = _userRepo.GetById(id);
-
-        if (user == null)
-        {
-            Console.WriteLine("User not found.");
-            return;
-        }
-
-        var confirm = GetUserInput($"Are you sure you want to delete '{user.FirstName} {user.LastName}'? (y/n): ");
-        if (confirm.ToLower() == "y")
-        {
-            try
+            else if (choice == "2")
             {
-                _userRepo.Delete(id);
-                Console.WriteLine("\n✓ User deleted successfully!");
+                var user = new User();
+                Console.Write("First Name: "); user.FirstName = Console.ReadLine();
+                Console.Write("Last Name: "); user.LastName = Console.ReadLine();
+                Console.Write("Email: "); user.Email = Console.ReadLine();
+                Console.Write("Password: "); user.Password = Console.ReadLine();
+                userRepo.Add(user);
+                Console.WriteLine("User added.");
             }
-            catch (Exception ex)
+            else if (choice == "3")
             {
-                Console.WriteLine($"\n✗ Error deleting user: {ex.Message}");
+                Console.Write("Enter User ID: ");
+                int id = int.Parse(Console.ReadLine());
+                var user = userRepo.GetById(id);
+                if (user == null) { Console.WriteLine("Not found."); continue; }
+                
+                Console.Write($"First Name [{user.FirstName}]: "); var fn = Console.ReadLine();
+                if (fn != "") user.FirstName = fn;
+                Console.Write($"Last Name [{user.LastName}]: "); var ln = Console.ReadLine();
+                if (ln != "") user.LastName = ln;
+                Console.Write($"Email [{user.Email}]: "); var email = Console.ReadLine();
+                if (email != "") user.Email = email;
+                Console.Write("Password: "); var pwd = Console.ReadLine();
+                if (pwd != "") user.Password = pwd;
+                userRepo.Update(user);
+                Console.WriteLine("User updated.");
             }
-        }
-        else
-        {
-            Console.WriteLine("Delete cancelled.");
+            else if (choice == "4")
+            {
+                Console.Write("Enter User ID: ");
+                int id = int.Parse(Console.ReadLine());
+                userRepo.Delete(id);
+                Console.WriteLine("User deleted.");
+            }
+            else if (choice == "5") break;
         }
     }
 
-
-    #endregion
-
-    #region Admins Menu
-
+    // ========== ADMINS ==========
     static void AdminsMenu()
     {
         while (true)
         {
-            SafeClear();
-            Console.WriteLine("╔══════════════════════════════════════════════╗");
-            Console.WriteLine("║            ADMINS MANAGEMENT                 ║");
-            Console.WriteLine("╠══════════════════════════════════════════════╣");
-            Console.WriteLine("║  1. List All Admins                          ║");
-            Console.WriteLine("║  2. Add New Admin                            ║");
-            Console.WriteLine("║  3. Edit Admin                               ║");
-            Console.WriteLine("║  4. Delete Admin                             ║");
-            Console.WriteLine("║  5. Back to Main Menu                        ║");
-            Console.WriteLine("╚══════════════════════════════════════════════╝");
+            Console.WriteLine("\n--- ADMINS ---");
+            Console.WriteLine("1. List");
+            Console.WriteLine("2. Add");
+            Console.WriteLine("3. Edit");
+            Console.WriteLine("4. Delete");
+            Console.WriteLine("5. Back");
+            Console.Write("Choice: ");
+            var choice = Console.ReadLine();
 
-            var choice = GetUserInput("Enter your choice: ");
-
-            switch (choice)
+            if (choice == "1")
             {
-                case "1":
-                    ListAdmins();
-                    break;
-                case "2":
-                    AddAdmin();
-                    break;
-                case "3":
-                    EditAdmin();
-                    break;
-                case "4":
-                    DeleteAdmin();
-                    break;
-                case "5":
-                    return;
-                default:
-                    Console.WriteLine("Invalid choice. Please try again.");
-                    break;
+                var admins = adminRepo.GetAll();
+                foreach (var a in admins)
+                    Console.WriteLine($"[{a.Id}] {a.Username} | {a.Email}");
             }
-            Pause();
-        }
-    }
-
-    static void ListAdmins()
-    {
-        SafeClear();
-        Console.WriteLine("\n═══ ALL ADMINS ═══\n");
-        var admins = _adminRepo.GetAll();
-        if (admins.Count == 0)
-        {
-            Console.WriteLine("No admins found.");
-            return;
-        }
-        foreach (var admin in admins)
-        {
-            Console.WriteLine(admin);
-        }
-    }
-
-    static void AddAdmin()
-    {
-        SafeClear();
-        Console.WriteLine("\n═══ ADD NEW ADMIN ═══\n");
-
-        var admin = new Admin
-        {
-            Username = GetUserInput("Username: "),
-            Email = GetUserInput("Email: "),
-            Password = GetUserInput("Password: ")
-        };
-
-        try
-        {
-            _adminRepo.Add(admin);
-            Console.WriteLine("\n✓ Admin added successfully!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"\n✗ Error adding admin: {ex.Message}");
-        }
-    }
-
-    static void EditAdmin()
-    {
-        SafeClear();
-        ListAdmins();
-        Console.WriteLine();
-
-        var id = GetIntInput("Enter Admin ID to edit: ");
-        var admin = _adminRepo.GetById(id);
-
-        if (admin == null)
-        {
-            Console.WriteLine("Admin not found.");
-            return;
-        }
-
-        Console.WriteLine($"\nEditing: {admin.Username}");
-        Console.WriteLine("(Press Enter to keep current value)\n");
-
-        var username = GetUserInput($"Username [{admin.Username}]: ");
-        if (!string.IsNullOrWhiteSpace(username)) admin.Username = username;
-
-        var email = GetUserInput($"Email [{admin.Email}]: ");
-        if (!string.IsNullOrWhiteSpace(email)) admin.Email = email;
-
-        var password = GetUserInput($"Password [hidden]: ");
-        if (!string.IsNullOrWhiteSpace(password)) admin.Password = password;
-
-        try
-        {
-            _adminRepo.Update(admin);
-            Console.WriteLine("\n✓ Admin updated successfully!");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"\n✗ Error updating admin: {ex.Message}");
-        }
-    }
-
-    static void DeleteAdmin()
-    {
-        SafeClear();
-        ListAdmins();
-        Console.WriteLine();
-
-        var id = GetIntInput("Enter Admin ID to delete: ");
-        var admin = _adminRepo.GetById(id);
-
-        if (admin == null)
-        {
-            Console.WriteLine("Admin not found.");
-            return;
-        }
-
-        var confirm = GetUserInput($"Are you sure you want to delete admin '{admin.Username}'? (y/n): ");
-        if (confirm.ToLower() == "y")
-        {
-            try
+            else if (choice == "2")
             {
-                _adminRepo.Delete(id);
-                Console.WriteLine("\n✓ Admin deleted successfully!");
+                var admin = new Admin();
+                Console.Write("Username: "); admin.Username = Console.ReadLine();
+                Console.Write("Email: "); admin.Email = Console.ReadLine();
+                Console.Write("Password: "); admin.Password = Console.ReadLine();
+                adminRepo.Add(admin);
+                Console.WriteLine("Admin added.");
             }
-            catch (Exception ex)
+            else if (choice == "3")
             {
-                Console.WriteLine($"\n✗ Error deleting admin: {ex.Message}");
+                Console.Write("Enter Admin ID: ");
+                int id = int.Parse(Console.ReadLine());
+                var admin = adminRepo.GetById(id);
+                if (admin == null) { Console.WriteLine("Not found."); continue; }
+                
+                Console.Write($"Username [{admin.Username}]: "); var un = Console.ReadLine();
+                if (un != "") admin.Username = un;
+                Console.Write($"Email [{admin.Email}]: "); var email = Console.ReadLine();
+                if (email != "") admin.Email = email;
+                Console.Write("Password: "); var pwd = Console.ReadLine();
+                if (pwd != "") admin.Password = pwd;
+                adminRepo.Update(admin);
+                Console.WriteLine("Admin updated.");
             }
-        }
-        else
-        {
-            Console.WriteLine("Delete cancelled.");
+            else if (choice == "4")
+            {
+                Console.Write("Enter Admin ID: ");
+                int id = int.Parse(Console.ReadLine());
+                adminRepo.Delete(id);
+                Console.WriteLine("Admin deleted.");
+            }
+            else if (choice == "5") break;
         }
     }
 
-    #endregion
-
-    #region Bookings Menu
-
+    // ========== BOOKINGS ==========
     static void BookingsMenu()
     {
         while (true)
         {
-            SafeClear();
-            Console.WriteLine("╔══════════════════════════════════════════════╗");
-            Console.WriteLine("║           BOOKINGS MANAGEMENT                ║");
-            Console.WriteLine("╠══════════════════════════════════════════════╣");
-            Console.WriteLine("║  1. List All Bookings                        ║");
-            Console.WriteLine("║  2. Create New Booking                       ║");
-            Console.WriteLine("║  3. Cancel Booking                           ║");
-            Console.WriteLine("║  4. Back to Main Menu                        ║");
-            Console.WriteLine("╚══════════════════════════════════════════════╝");
+            Console.WriteLine("\n--- BOOKINGS ---");
+            Console.WriteLine("1. List");
+            Console.WriteLine("2. Create");
+            Console.WriteLine("3. Cancel");
+            Console.WriteLine("4. Back");
+            Console.Write("Choice: ");
+            var choice = Console.ReadLine();
 
-            var choice = GetUserInput("Enter your choice: ");
-
-            switch (choice)
+            if (choice == "1")
             {
-                case "1":
-                    ListBookings();
-                    break;
-                case "2":
-                    CreateBooking();
-                    break;
-                case "3":
-                    CancelBooking();
-                    break;
-                case "4":
-                    return;
-                default:
-                    Console.WriteLine("Invalid choice. Please try again.");
-                    break;
+                var bookings = bookingRepo.GetAll();
+                foreach (var b in bookings)
+                {
+                    int days = (b.EndDate - b.StartDate).Days + 1;
+                    Console.WriteLine($"[{b.Id}] {b.VehicleName} | {b.UserName} | {b.StartDate:dd MMM} to {b.EndDate:dd MMM} ({days} days) | Rs.{b.TotalCost}");
+                }
             }
-            Pause();
-        }
-    }
-
-    static void ListBookings()
-    {
-        Console.Clear();
-        Console.WriteLine("\n═══ ALL BOOKINGS ═══\n");
-        var bookings = _bookingRepo.GetAll();
-        if (bookings.Count == 0)
-        {
-            Console.WriteLine("No bookings found.");
-            return;
-        }
-        foreach (var booking in bookings)
-        {
-            Console.WriteLine(booking);
-        }
-    }
-
-    static void CreateBooking()
-    {
-        Console.Clear();
-        Console.WriteLine("\n═══ CREATE NEW BOOKING ═══\n");
-
-        // Show available vehicles
-        Console.WriteLine("Available Vehicles:");
-        var vehicles = _vehicleRepo.GetAvailable();
-        if (vehicles.Count == 0)
-        {
-            Console.WriteLine("No vehicles available for booking.");
-            return;
-        }
-        foreach (var v in vehicles)
-        {
-            Console.WriteLine($"  {v}");
-        }
-        Console.WriteLine();
-
-        var vehicleId = GetIntInput("Enter Vehicle ID to book: ");
-        var vehicle = _vehicleRepo.GetById(vehicleId);
-        if (vehicle == null || vehicle.Status != "Available")
-        {
-            Console.WriteLine("Invalid vehicle or not available.");
-            return;
-        }
-
-        // Show users
-        Console.WriteLine("\nUsers:");
-        var users = _userRepo.GetAll();
-        foreach (var u in users)
-        {
-            Console.WriteLine($"  {u}");
-        }
-        Console.WriteLine();
-
-        var userId = GetIntInput("Enter User ID: ");
-        if (_userRepo.GetById(userId) == null)
-        {
-            Console.WriteLine("User not found.");
-            return;
-        }
-
-        var startDate = GetDateInput("Start Date (yyyy-mm-dd): ");
-        var endDate = GetDateInput("End Date (yyyy-mm-dd): ");
-
-        if (endDate < startDate)
-        {
-            Console.WriteLine("End date cannot be before start date.");
-            return;
-        }
-
-        var pickupLocation = GetUserInput("Pickup Location: ");
-
-        var totalDays = (endDate - startDate).Days + 1;
-        var rentalCost = totalDays * vehicle.PricePerDay;
-        var securityDeposit = 500m;
-        var totalCost = rentalCost + securityDeposit;
-
-        Console.WriteLine($"\n═══ BOOKING SUMMARY ═══");
-        Console.WriteLine($"Vehicle: {vehicle.Name}");
-        Console.WriteLine($"Duration: {totalDays} days");
-        Console.WriteLine($"Rental Cost: ₹{rentalCost}");
-        Console.WriteLine($"Security Deposit: ₹{securityDeposit}");
-        Console.WriteLine($"Total: ₹{totalCost}");
-
-        var confirm = GetUserInput("\nConfirm booking? (y/n): ");
-        if (confirm.ToLower() == "y")
-        {
-            var booking = new Booking
+            else if (choice == "2")
             {
-                UserId = userId,
-                VehicleId = vehicleId,
-                StartDate = startDate,
-                EndDate = endDate,
-                PickupLocation = pickupLocation,
-                TotalCost = totalCost
-            };
+                Console.WriteLine("Available Vehicles:");
+                var vehicles = vehicleRepo.GetAvailable();
+                foreach (var v in vehicles)
+                    Console.WriteLine($"[{v.Id}] {v.Name} ({v.Type}) | Rs.{v.PricePerDay}/day");
 
-            try
-            {
-                _bookingRepo.Add(booking);
-                _vehicleRepo.UpdateStatus(vehicleId, "Lent");
-                Console.WriteLine("\n✓ Booking created successfully!");
+                Console.Write("Vehicle ID: ");
+                int vehicleId = int.Parse(Console.ReadLine());
+                var vehicle = vehicleRepo.GetById(vehicleId);
+
+                Console.WriteLine("Users:");
+                var users = userRepo.GetAll();
+                foreach (var u in users)
+                    Console.WriteLine($"[{u.Id}] {u.FirstName} {u.LastName}");
+
+                Console.Write("User ID: ");
+                int userId = int.Parse(Console.ReadLine());
+
+                Console.Write("Start Date (yyyy-mm-dd): ");
+                DateTime startDate = DateTime.Parse(Console.ReadLine());
+                Console.Write("End Date (yyyy-mm-dd): ");
+                DateTime endDate = DateTime.Parse(Console.ReadLine());
+                Console.Write("Pickup Location: ");
+                string pickup = Console.ReadLine();
+
+                int days = (endDate - startDate).Days + 1;
+                decimal total = days * vehicle.PricePerDay + 500;
+
+                var booking = new Booking();
+                booking.UserId = userId;
+                booking.VehicleId = vehicleId;
+                booking.StartDate = startDate;
+                booking.EndDate = endDate;
+                booking.PickupLocation = pickup;
+                booking.TotalCost = total;
+
+                bookingRepo.Add(booking);
+                vehicleRepo.UpdateStatus(vehicleId, "Lent");
+                Console.WriteLine($"Booking created. Total: {total}");
             }
-            catch (Exception ex)
+            else if (choice == "3")
             {
-                Console.WriteLine($"\n✗ Error creating booking: {ex.Message}");
+                Console.Write("Enter Booking ID: ");
+                int id = int.Parse(Console.ReadLine());
+                var booking = bookingRepo.GetById(id);
+                if (booking != null)
+                {
+                    bookingRepo.Delete(id);
+                    vehicleRepo.UpdateStatus(booking.VehicleId, "Available");
+                    Console.WriteLine("Booking cancelled.");
+                }
             }
-        }
-        else
-        {
-            Console.WriteLine("Booking cancelled.");
+            else if (choice == "4") break;
         }
     }
-
-    static void CancelBooking()
-    {
-        Console.Clear();
-        ListBookings();
-        Console.WriteLine();
-
-        var id = GetIntInput("Enter Booking ID to cancel: ");
-        var booking = _bookingRepo.GetById(id);
-
-        if (booking == null)
-        {
-            Console.WriteLine("Booking not found.");
-            return;
-        }
-
-        var confirm = GetUserInput($"Are you sure you want to cancel booking #{id}? (y/n): ");
-        if (confirm.ToLower() == "y")
-        {
-            try
-            {
-                _bookingRepo.Delete(id);
-                _vehicleRepo.UpdateStatus(booking.VehicleId, "Available");
-                Console.WriteLine("\n✓ Booking cancelled successfully!");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"\n✗ Error cancelling booking: {ex.Message}");
-            }
-        }
-        else
-        {
-            Console.WriteLine("Cancellation aborted.");
-        }
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    static string GetUserInput(string prompt)
-    {
-        Console.Write(prompt);
-        return Console.ReadLine() ?? string.Empty;
-    }
-
-    static int GetIntInput(string prompt)
-    {
-        while (true)
-        {
-            Console.Write(prompt);
-            if (int.TryParse(Console.ReadLine(), out var result))
-                return result;
-            Console.WriteLine("Please enter a valid number.");
-        }
-    }
-
-    static decimal GetDecimalInput(string prompt)
-    {
-        while (true)
-        {
-            Console.Write(prompt);
-            if (decimal.TryParse(Console.ReadLine(), out var result))
-                return result;
-            Console.WriteLine("Please enter a valid amount.");
-        }
-    }
-
-    static DateTime GetDateInput(string prompt)
-    {
-        while (true)
-        {
-            Console.Write(prompt);
-            if (DateTime.TryParse(Console.ReadLine(), out var result))
-                return result;
-            Console.WriteLine("Please enter a valid date (yyyy-mm-dd).");
-        }
-    }
-
-    static void Pause()
-    {
-        Console.WriteLine("\nPress any key to continue...");
-        try { Console.ReadKey(); } catch { }
-    }
-
-    static void SafeClear()
-    {
-        try
-        {
-            Console.Clear();
-        }
-        catch
-        {
-            // If Console.Clear() fails (e.g., in non-interactive terminal), just print newlines
-            Console.WriteLine("\n\n");
-        }
-    }
-
-    #endregion
 }

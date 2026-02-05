@@ -8,117 +8,72 @@ public class AdminRepository
     public List<Admin> GetAll()
     {
         var admins = new List<Admin>();
-        using var connection = DatabaseHelper.GetConnection();
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Username, Email, Password FROM Admins";
-
-        using var reader = command.ExecuteReader();
+        var conn = DatabaseHelper.GetConnection();
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT Id, Username, Email, Password FROM Admins";
+        var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            admins.Add(new Admin
-            {
-                Id = reader.GetInt32(0),
-                Username = reader.GetString(1),
-                Email = reader.GetString(2),
-                Password = reader.GetString(3)
-            });
+            var a = new Admin();
+            a.Id = reader.GetInt32(0);
+            a.Username = reader.GetString(1);
+            a.Email = reader.GetString(2);
+            a.Password = reader.GetString(3);
+            admins.Add(a);
         }
+        conn.Close();
         return admins;
     }
 
-    public Admin? GetById(int id)
+    public Admin GetById(int id)
     {
-        using var connection = DatabaseHelper.GetConnection();
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Username, Email, Password FROM Admins WHERE Id = @Id";
-        command.Parameters.AddWithValue("@Id", id);
-
-        using var reader = command.ExecuteReader();
+        var conn = DatabaseHelper.GetConnection();
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT Id, Username, Email, Password FROM Admins WHERE Id = " + id;
+        var reader = cmd.ExecuteReader();
         if (reader.Read())
         {
-            return new Admin
-            {
-                Id = reader.GetInt32(0),
-                Username = reader.GetString(1),
-                Email = reader.GetString(2),
-                Password = reader.GetString(3)
-            };
+            var a = new Admin();
+            a.Id = reader.GetInt32(0);
+            a.Username = reader.GetString(1);
+            a.Email = reader.GetString(2);
+            a.Password = reader.GetString(3);
+            conn.Close();
+            return a;
         }
-        return null;
-    }
-
-    public Admin? GetByUsername(string username)
-    {
-        using var connection = DatabaseHelper.GetConnection();
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, Username, Email, Password FROM Admins WHERE Username = @Username";
-        command.Parameters.AddWithValue("@Username", username);
-
-        using var reader = command.ExecuteReader();
-        if (reader.Read())
-        {
-            return new Admin
-            {
-                Id = reader.GetInt32(0),
-                Username = reader.GetString(1),
-                Email = reader.GetString(2),
-                Password = reader.GetString(3)
-            };
-        }
+        conn.Close();
         return null;
     }
 
     public void Add(Admin admin)
     {
-        using var connection = DatabaseHelper.GetConnection();
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = @"
-            INSERT INTO Admins (Username, Email, Password)
-            VALUES (@Username, @Email, @Password)";
-        command.Parameters.AddWithValue("@Username", admin.Username);
-        command.Parameters.AddWithValue("@Email", admin.Email);
-        command.Parameters.AddWithValue("@Password", admin.Password);
-
-        command.ExecuteNonQuery();
+        var conn = DatabaseHelper.GetConnection();
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = $"INSERT INTO Admins (Username, Email, Password) VALUES ('{admin.Username}', '{admin.Email}', '{admin.Password}')";
+        cmd.ExecuteNonQuery();
+        conn.Close();
     }
 
     public void Update(Admin admin)
     {
-        using var connection = DatabaseHelper.GetConnection();
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = @"
-            UPDATE Admins SET 
-                Username = @Username,
-                Email = @Email,
-                Password = @Password
-            WHERE Id = @Id";
-        command.Parameters.AddWithValue("@Id", admin.Id);
-        command.Parameters.AddWithValue("@Username", admin.Username);
-        command.Parameters.AddWithValue("@Email", admin.Email);
-        command.Parameters.AddWithValue("@Password", admin.Password);
-
-        command.ExecuteNonQuery();
+        var conn = DatabaseHelper.GetConnection();
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = $"UPDATE Admins SET Username='{admin.Username}', Email='{admin.Email}', Password='{admin.Password}' WHERE Id={admin.Id}";
+        cmd.ExecuteNonQuery();
+        conn.Close();
     }
 
     public void Delete(int id)
     {
-        using var connection = DatabaseHelper.GetConnection();
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM Admins WHERE Id = @Id";
-        command.Parameters.AddWithValue("@Id", id);
-
-        command.ExecuteNonQuery();
+        var conn = DatabaseHelper.GetConnection();
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM Admins WHERE Id = " + id;
+        cmd.ExecuteNonQuery();
+        conn.Close();
     }
 }
