@@ -51,6 +51,10 @@ public class DatabaseHelper
             );";
         cmd.ExecuteNonQuery();
         connection.Close();
+
+        // Add dummy data
+        SeedData.PopulateDummyData();
+
         Console.WriteLine("Database ready.");
     }
 }
