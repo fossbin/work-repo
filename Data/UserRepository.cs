@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+using System.Data.SQLite;
 using GoWheelsConsole.Models;
 
 namespace GoWheelsConsole.Data;
@@ -77,5 +77,27 @@ public class UserRepository
         cmd.CommandText = "DELETE FROM Users WHERE Id = " + id;
         cmd.ExecuteNonQuery();
         conn.Close();
+    }
+
+    public User GetByEmail(string email)
+    {
+        var conn = DatabaseHelper.GetConnection();
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT Id, FirstName, LastName, Email, Password FROM Users WHERE Email = '{email}'";
+        var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            var u = new User();
+            u.Id = reader.GetInt32(0);
+            u.FirstName = reader.GetString(1);
+            u.LastName = reader.GetString(2);
+            u.Email = reader.GetString(3);
+            u.Password = reader.GetString(4);
+            conn.Close();
+            return u;
+        }
+        conn.Close();
+        return null;
     }
 }
