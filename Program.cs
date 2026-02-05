@@ -482,6 +482,12 @@ class Program
                     int vehicleId = int.Parse(Console.ReadLine());
                     var vehicle = vehicleRepo.GetById(vehicleId);
 
+                    if (vehicle == null)
+                    {
+                        Console.WriteLine("Vehicle not found!");
+                        break;
+                    }
+
                     Console.WriteLine("Users:");
                     var users = userRepo.GetAll();
                     foreach (var u in users)
