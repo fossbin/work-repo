@@ -12,7 +12,7 @@ public class UserRepository
         connection.Open();
 
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, FirstName, LastName, Email, Password, Role FROM Users";
+        command.CommandText = "SELECT Id, FirstName, LastName, Email, Password FROM Users";
 
         using var reader = command.ExecuteReader();
         while (reader.Read())
@@ -23,8 +23,7 @@ public class UserRepository
                 FirstName = reader.GetString(1),
                 LastName = reader.GetString(2),
                 Email = reader.GetString(3),
-                Password = reader.GetString(4),
-                Role = reader.GetString(5)
+                Password = reader.GetString(4)
             });
         }
         return users;
@@ -36,7 +35,7 @@ public class UserRepository
         connection.Open();
 
         var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, FirstName, LastName, Email, Password, Role FROM Users WHERE Id = @Id";
+        command.CommandText = "SELECT Id, FirstName, LastName, Email, Password FROM Users WHERE Id = @Id";
         command.Parameters.AddWithValue("@Id", id);
 
         using var reader = command.ExecuteReader();
@@ -48,8 +47,7 @@ public class UserRepository
                 FirstName = reader.GetString(1),
                 LastName = reader.GetString(2),
                 Email = reader.GetString(3),
-                Password = reader.GetString(4),
-                Role = reader.GetString(5)
+                Password = reader.GetString(4)
             };
         }
         return null;
@@ -62,13 +60,12 @@ public class UserRepository
 
         var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO Users (FirstName, LastName, Email, Password, Role)
-            VALUES (@FirstName, @LastName, @Email, @Password, @Role)";
+            INSERT INTO Users (FirstName, LastName, Email, Password)
+            VALUES (@FirstName, @LastName, @Email, @Password)";
         command.Parameters.AddWithValue("@FirstName", user.FirstName);
         command.Parameters.AddWithValue("@LastName", user.LastName);
         command.Parameters.AddWithValue("@Email", user.Email);
         command.Parameters.AddWithValue("@Password", user.Password);
-        command.Parameters.AddWithValue("@Role", user.Role);
 
         command.ExecuteNonQuery();
     }
@@ -84,15 +81,13 @@ public class UserRepository
                 FirstName = @FirstName,
                 LastName = @LastName,
                 Email = @Email,
-                Password = @Password,
-                Role = @Role
+                Password = @Password
             WHERE Id = @Id";
         command.Parameters.AddWithValue("@Id", user.Id);
         command.Parameters.AddWithValue("@FirstName", user.FirstName);
         command.Parameters.AddWithValue("@LastName", user.LastName);
         command.Parameters.AddWithValue("@Email", user.Email);
         command.Parameters.AddWithValue("@Password", user.Password);
-        command.Parameters.AddWithValue("@Role", user.Role);
 
         command.ExecuteNonQuery();
     }

@@ -8,6 +8,7 @@ class Program
     private static readonly UserRepository _userRepo = new();
     private static readonly VehicleRepository _vehicleRepo = new();
     private static readonly BookingRepository _bookingRepo = new();
+    private static readonly AdminRepository _adminRepo = new();
 
     static void Main(string[] args)
     {
@@ -30,9 +31,12 @@ class Program
                     UsersMenu();
                     break;
                 case "3":
-                    BookingsMenu();
+                    AdminsMenu();
                     break;
                 case "4":
+                    BookingsMenu();
+                    break;
+                case "5":
                     Console.WriteLine("\nThank you for using GoWheels! Goodbye.");
                     return;
                 default:
@@ -50,8 +54,9 @@ class Program
         Console.WriteLine("╠══════════════════════════════════════════════╣");
         Console.WriteLine("║  1. Vehicles Management                      ║");
         Console.WriteLine("║  2. Users Management                         ║");
-        Console.WriteLine("║  3. Bookings Management                      ║");
-        Console.WriteLine("║  4. Exit                                     ║");
+        Console.WriteLine("║  3. Admins Management                        ║");
+        Console.WriteLine("║  4. Bookings Management                      ║");
+        Console.WriteLine("║  5. Exit                                     ║");
         Console.WriteLine("╚══════════════════════════════════════════════╝");
     }
 
@@ -329,8 +334,7 @@ class Program
             FirstName = GetUserInput("First Name: "),
             LastName = GetUserInput("Last Name: "),
             Email = GetUserInput("Email: "),
-            Password = GetUserInput("Password: "),
-            Role = GetUserRole()
+            Password = GetUserInput("Password: ")
         };
 
         try
@@ -373,10 +377,6 @@ class Program
 
         var password = GetUserInput($"Password [hidden]: ");
         if (!string.IsNullOrWhiteSpace(password)) user.Password = password;
-
-        Console.WriteLine($"Current Role: {user.Role}");
-        var changeRole = GetUserInput("Change role? (y/n): ");
-        if (changeRole.ToLower() == "y") user.Role = GetUserRole();
 
         try
         {
@@ -423,18 +423,161 @@ class Program
         }
     }
 
-    static string GetUserRole()
+
+    #endregion
+
+    #region Admins Menu
+
+    static void AdminsMenu()
     {
-        Console.WriteLine("Select Role:");
-        Console.WriteLine("  1. User");
-        Console.WriteLine("  2. Admin");
-        var choice = GetUserInput("Enter choice: ");
-        return choice switch
+        while (true)
         {
-            "1" => "user",
-            "2" => "admin",
-            _ => "user"
+            SafeClear();
+            Console.WriteLine("╔══════════════════════════════════════════════╗");
+            Console.WriteLine("║            ADMINS MANAGEMENT                 ║");
+            Console.WriteLine("╠══════════════════════════════════════════════╣");
+            Console.WriteLine("║  1. List All Admins                          ║");
+            Console.WriteLine("║  2. Add New Admin                            ║");
+            Console.WriteLine("║  3. Edit Admin                               ║");
+            Console.WriteLine("║  4. Delete Admin                             ║");
+            Console.WriteLine("║  5. Back to Main Menu                        ║");
+            Console.WriteLine("╚══════════════════════════════════════════════╝");
+
+            var choice = GetUserInput("Enter your choice: ");
+
+            switch (choice)
+            {
+                case "1":
+                    ListAdmins();
+                    break;
+                case "2":
+                    AddAdmin();
+                    break;
+                case "3":
+                    EditAdmin();
+                    break;
+                case "4":
+                    DeleteAdmin();
+                    break;
+                case "5":
+                    return;
+                default:
+                    Console.WriteLine("Invalid choice. Please try again.");
+                    break;
+            }
+            Pause();
+        }
+    }
+
+    static void ListAdmins()
+    {
+        SafeClear();
+        Console.WriteLine("\n═══ ALL ADMINS ═══\n");
+        var admins = _adminRepo.GetAll();
+        if (admins.Count == 0)
+        {
+            Console.WriteLine("No admins found.");
+            return;
+        }
+        foreach (var admin in admins)
+        {
+            Console.WriteLine(admin);
+        }
+    }
+
+    static void AddAdmin()
+    {
+        SafeClear();
+        Console.WriteLine("\n═══ ADD NEW ADMIN ═══\n");
+
+        var admin = new Admin
+        {
+            Username = GetUserInput("Username: "),
+            Email = GetUserInput("Email: "),
+            Password = GetUserInput("Password: ")
         };
+
+        try
+        {
+            _adminRepo.Add(admin);
+            Console.WriteLine("\n✓ Admin added successfully!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\n✗ Error adding admin: {ex.Message}");
+        }
+    }
+
+    static void EditAdmin()
+    {
+        SafeClear();
+        ListAdmins();
+        Console.WriteLine();
+
+        var id = GetIntInput("Enter Admin ID to edit: ");
+        var admin = _adminRepo.GetById(id);
+
+        if (admin == null)
+        {
+            Console.WriteLine("Admin not found.");
+            return;
+        }
+
+        Console.WriteLine($"\nEditing: {admin.Username}");
+        Console.WriteLine("(Press Enter to keep current value)\n");
+
+        var username = GetUserInput($"Username [{admin.Username}]: ");
+        if (!string.IsNullOrWhiteSpace(username)) admin.Username = username;
+
+        var email = GetUserInput($"Email [{admin.Email}]: ");
+        if (!string.IsNullOrWhiteSpace(email)) admin.Email = email;
+
+        var password = GetUserInput($"Password [hidden]: ");
+        if (!string.IsNullOrWhiteSpace(password)) admin.Password = password;
+
+        try
+        {
+            _adminRepo.Update(admin);
+            Console.WriteLine("\n✓ Admin updated successfully!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"\n✗ Error updating admin: {ex.Message}");
+        }
+    }
+
+    static void DeleteAdmin()
+    {
+        SafeClear();
+        ListAdmins();
+        Console.WriteLine();
+
+        var id = GetIntInput("Enter Admin ID to delete: ");
+        var admin = _adminRepo.GetById(id);
+
+        if (admin == null)
+        {
+            Console.WriteLine("Admin not found.");
+            return;
+        }
+
+        var confirm = GetUserInput($"Are you sure you want to delete admin '{admin.Username}'? (y/n): ");
+        if (confirm.ToLower() == "y")
+        {
+            try
+            {
+                _adminRepo.Delete(id);
+                Console.WriteLine("\n✓ Admin deleted successfully!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n✗ Error deleting admin: {ex.Message}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Delete cancelled.");
+        }
     }
 
     #endregion
