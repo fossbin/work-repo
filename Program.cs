@@ -5,10 +5,6 @@ namespace GoWheelsConsole;
 
 class Program
 {
-    static UserRepository userRepo = new UserRepository();
-    static VehicleRepository vehicleRepo = new VehicleRepository();
-    static BookingRepository bookingRepo = new BookingRepository();
-    static AdminRepository adminRepo = new AdminRepository();
     static User currentUser = null;
     static Admin currentAdmin = null;
 
@@ -46,6 +42,14 @@ class Program
         Console.Write("Password: ");
         var password = Console.ReadLine();
 
+        if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName) || 
+            string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            Console.WriteLine("Error: All fields are required!");
+            return;
+        }
+
+        var userRepo = new UserRepository();
         var existingUser = userRepo.GetByEmail(email);
         if (existingUser != null)
         {
@@ -71,6 +75,7 @@ class Program
         Console.Write("Password: ");
         var password = Console.ReadLine();
 
+        var userRepo = new UserRepository();
         var user = userRepo.GetByEmail(email);
         if (user == null || user.Password != password)
         {
@@ -92,6 +97,7 @@ class Program
         Console.Write("Password: ");
         var password = Console.ReadLine();
 
+        var adminRepo = new AdminRepository();
         var admin = adminRepo.GetByUsername(username);
         if (admin == null || admin.Password != password)
         {
@@ -133,6 +139,7 @@ class Program
     static void BrowseVehicles()
     {
         Console.WriteLine("\n--- AVAILABLE VEHICLES ---");
+        var vehicleRepo = new VehicleRepository();
         var vehicles = vehicleRepo.GetAvailable();
         foreach (var v in vehicles)
             Console.WriteLine($"[{v.Id}] {v.Name} ({v.Type}) | Rs.{v.PricePerDay}/day | {v.VehicleNumber}");
@@ -141,6 +148,7 @@ class Program
     static void MyBookings()
     {
         Console.WriteLine("\n--- MY BOOKINGS ---");
+        var bookingRepo = new BookingRepository();
         var bookings = bookingRepo.GetByUserId(currentUser.Id);
         foreach (var b in bookings)
         {
@@ -153,65 +161,123 @@ class Program
     {
         Console.WriteLine("\n--- CREATE BOOKING ---");
         Console.WriteLine("Available Vehicles:");
+        var vehicleRepo = new VehicleRepository();
         var vehicles = vehicleRepo.GetAvailable();
+        
+        if (vehicles.Count == 0)
+        {
+            Console.WriteLine("No vehicles available at the moment!");
+            return;
+        }
+        
         foreach (var v in vehicles)
             Console.WriteLine($"[{v.Id}] {v.Name} ({v.Type}) | Rs.{v.PricePerDay}/day");
 
-        Console.Write("Vehicle ID: ");
-        int vehicleId = int.Parse(Console.ReadLine());
-        var vehicle = vehicleRepo.GetById(vehicleId);
-
-        if (vehicle == null || vehicle.Status != "Available")
+        try
         {
-            Console.WriteLine("Vehicle not available!");
-            return;
+            Console.Write("Vehicle ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int vehicleId))
+            {
+                Console.WriteLine("Error: Invalid vehicle ID!");
+                return;
+            }
+            
+            var vehicle = vehicleRepo.GetById(vehicleId);
+
+            if (vehicle == null || vehicle.Status != "Available")
+            {
+                Console.WriteLine("Vehicle not available!");
+                return;
+            }
+
+            Console.Write("Start Date (yyyy-mm-dd): ");
+            if (!DateTime.TryParse(Console.ReadLine(), out DateTime startDate))
+            {
+                Console.WriteLine("Error: Invalid start date format!");
+                return;
+            }
+            
+            Console.Write("End Date (yyyy-mm-dd): ");
+            if (!DateTime.TryParse(Console.ReadLine(), out DateTime endDate))
+            {
+                Console.WriteLine("Error: Invalid end date format!");
+                return;
+            }
+            
+            if (endDate <= startDate)
+            {
+                Console.WriteLine("Error: End date must be after start date!");
+                return;
+            }
+            
+            Console.Write("Pickup Location: ");
+            string pickup = Console.ReadLine();
+            
+            if (string.IsNullOrWhiteSpace(pickup))
+            {
+                Console.WriteLine("Error: Pickup location cannot be empty!");
+                return;
+            }
+
+            int days = (endDate - startDate).Days + 1;
+            decimal total = days * vehicle.PricePerDay + 500;
+
+            var booking = new Booking();
+            booking.UserId = currentUser.Id;
+            booking.VehicleId = vehicleId;
+            booking.StartDate = startDate;
+            booking.EndDate = endDate;
+            booking.PickupLocation = pickup;
+            booking.TotalCost = total;
+
+            var bookingRepo = new BookingRepository();
+            bookingRepo.Add(booking);
+            vehicleRepo.UpdateStatus(vehicleId, "Lent");
+            Console.WriteLine($"Booking created. Total: Rs.{total}");
         }
-
-        Console.Write("Start Date (yyyy-mm-dd): ");
-        DateTime startDate = DateTime.Parse(Console.ReadLine());
-        Console.Write("End Date (yyyy-mm-dd): ");
-        DateTime endDate = DateTime.Parse(Console.ReadLine());
-        Console.Write("Pickup Location: ");
-        string pickup = Console.ReadLine();
-
-        int days = (endDate - startDate).Days + 1;
-        decimal total = days * vehicle.PricePerDay + 500;
-
-        var booking = new Booking();
-        booking.UserId = currentUser.Id;
-        booking.VehicleId = vehicleId;
-        booking.StartDate = startDate;
-        booking.EndDate = endDate;
-        booking.PickupLocation = pickup;
-        booking.TotalCost = total;
-
-        bookingRepo.Add(booking);
-        vehicleRepo.UpdateStatus(vehicleId, "Lent");
-        Console.WriteLine($"Booking created. Total: Rs.{total}");
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating booking: {ex.Message}");
+        }
     }
 
     static void CancelBooking()
     {
         Console.WriteLine("\n--- CANCEL BOOKING ---");
         Console.Write("Enter Booking ID: ");
-        int id = int.Parse(Console.ReadLine());
-        var booking = bookingRepo.GetById(id);
         
-        if (booking == null)
+        try
         {
-            Console.WriteLine("Booking not found!");
-            return;
-        }
+            if (!int.TryParse(Console.ReadLine(), out int id))
+            {
+                Console.WriteLine("Error: Invalid booking ID!");
+                return;
+            }
+            
+            var bookingRepo = new BookingRepository();
+            var booking = bookingRepo.GetById(id);
+            
+            if (booking == null)
+            {
+                Console.WriteLine("Error: Booking not found!");
+                return;
+            }
 
-        if (booking.UserId != currentUser.Id)
+            if (booking.UserId != currentUser.Id)
+            {
+                Console.WriteLine("Error: You can only cancel your own bookings!");
+                return;
+            }
+
+            bookingRepo.Delete(id);
+            var vehicleRepo = new VehicleRepository();
+            vehicleRepo.UpdateStatus(booking.VehicleId, "Available");
+            Console.WriteLine("Booking cancelled successfully!");
+        }
+        catch (Exception ex)
         {
-            Console.WriteLine("You can only cancel your own bookings!");
-            return;
+            Console.WriteLine($"Error cancelling booking: {ex.Message}");
         }
-
-        bookingRepo.Delete(id);
-        vehicleRepo.UpdateStatus(booking.VehicleId, "Available");
-        Console.WriteLine("Booking cancelled.");
     }
 
     // ========== ADMIN DASHBOARD ==========
@@ -253,6 +319,8 @@ class Program
             Console.WriteLine("5. Back");
             Console.Write("Choice: ");
             var choice = Console.ReadLine();
+
+            var vehicleRepo = new VehicleRepository();
 
             if (choice == "1")
             {
@@ -315,6 +383,8 @@ class Program
             Console.Write("Choice: ");
             var choice = Console.ReadLine();
 
+            var userRepo = new UserRepository();
+
             if (choice == "1")
             {
                 var users = userRepo.GetAll();
@@ -374,6 +444,8 @@ class Program
             Console.Write("Choice: ");
             var choice = Console.ReadLine();
 
+            var adminRepo = new AdminRepository();
+
             if (choice == "1")
             {
                 var admins = adminRepo.GetAll();
@@ -429,69 +501,90 @@ class Program
             Console.Write("Choice: ");
             var choice = Console.ReadLine();
 
-            if (choice == "1")
+            switch (choice)
             {
-                var bookings = bookingRepo.GetAll();
-                foreach (var b in bookings)
+                case "1":
                 {
-                    int days = (b.EndDate - b.StartDate).Days + 1;
-                    Console.WriteLine($"[{b.Id}] {b.VehicleName} | {b.UserName} | {b.StartDate:dd MMM} to {b.EndDate:dd MMM} ({days} days) | Rs.{b.TotalCost}");
+                    var bookingRepo = new BookingRepository();
+                    var bookings = bookingRepo.GetAll();
+                    foreach (var b in bookings)
+                    {
+                        int listDays = (b.EndDate - b.StartDate).Days + 1;
+                        Console.WriteLine($"[{b.Id}] {b.VehicleName} | {b.UserName} | {b.StartDate:dd MMM} to {b.EndDate:dd MMM} ({listDays} days) | Rs.{b.TotalCost}");
+                    }
+                    break;
                 }
-            }
-            else if (choice == "2")
-            {
-                Console.WriteLine("Available Vehicles:");
-                var vehicles = vehicleRepo.GetAvailable();
-                foreach (var v in vehicles)
-                    Console.WriteLine($"[{v.Id}] {v.Name} ({v.Type}) | Rs.{v.PricePerDay}/day");
-
-                Console.Write("Vehicle ID: ");
-                int vehicleId = int.Parse(Console.ReadLine());
-                var vehicle = vehicleRepo.GetById(vehicleId);
-
-                Console.WriteLine("Users:");
-                var users = userRepo.GetAll();
-                foreach (var u in users)
-                    Console.WriteLine($"[{u.Id}] {u.FirstName} {u.LastName}");
-
-                Console.Write("User ID: ");
-                int userId = int.Parse(Console.ReadLine());
-
-                Console.Write("Start Date (yyyy-mm-dd): ");
-                DateTime startDate = DateTime.Parse(Console.ReadLine());
-                Console.Write("End Date (yyyy-mm-dd): ");
-                DateTime endDate = DateTime.Parse(Console.ReadLine());
-                Console.Write("Pickup Location: ");
-                string pickup = Console.ReadLine();
-
-                int days = (endDate - startDate).Days + 1;
-                decimal total = days * vehicle.PricePerDay + 500;
-
-                var booking = new Booking();
-                booking.UserId = userId;
-                booking.VehicleId = vehicleId;
-                booking.StartDate = startDate;
-                booking.EndDate = endDate;
-                booking.PickupLocation = pickup;
-                booking.TotalCost = total;
-
-                bookingRepo.Add(booking);
-                vehicleRepo.UpdateStatus(vehicleId, "Lent");
-                Console.WriteLine($"Booking created. Total: {total}");
-            }
-            else if (choice == "3")
-            {
-                Console.Write("Enter Booking ID: ");
-                int id = int.Parse(Console.ReadLine());
-                var booking = bookingRepo.GetById(id);
-                if (booking != null)
+                case "2":
                 {
-                    bookingRepo.Delete(id);
-                    vehicleRepo.UpdateStatus(booking.VehicleId, "Available");
-                    Console.WriteLine("Booking cancelled.");
+                    var vehicleRepo = new VehicleRepository();
+                    var userRepo = new UserRepository();
+                    var bookingRepo = new BookingRepository();
+                    
+                    Console.WriteLine("Available Vehicles:");
+                    var vehicles = vehicleRepo.GetAvailable();
+                    foreach (var v in vehicles)
+                        Console.WriteLine($"[{v.Id}] {v.Name} ({v.Type}) | Rs.{v.PricePerDay}/day");
+
+                    Console.Write("Vehicle ID: ");
+                    int vehicleId = int.Parse(Console.ReadLine());
+                    var vehicle = vehicleRepo.GetById(vehicleId);
+                    
+                    if (vehicle == null)
+                    {
+                        Console.WriteLine("Error: Vehicle not found!");
+                        break;
+                    }
+
+                    Console.WriteLine("Users:");
+                    var users = userRepo.GetAll();
+                    foreach (var u in users)
+                        Console.WriteLine($"[{u.Id}] {u.FirstName} {u.LastName}");
+
+                    Console.Write("User ID: ");
+                    int userId = int.Parse(Console.ReadLine());
+
+                    Console.Write("Start Date (yyyy-mm-dd): ");
+                    DateTime startDate = DateTime.Parse(Console.ReadLine());
+                    Console.Write("End Date (yyyy-mm-dd): ");
+                    DateTime endDate = DateTime.Parse(Console.ReadLine());
+                    Console.Write("Pickup Location: ");
+                    string pickup = Console.ReadLine();
+
+                    int bookingDays = (endDate - startDate).Days + 1;
+                    decimal total = bookingDays * vehicle.PricePerDay + 500;
+
+                    var booking = new Booking();
+                    booking.UserId = userId;
+                    booking.VehicleId = vehicleId;
+                    booking.StartDate = startDate;
+                    booking.EndDate = endDate;
+                    booking.PickupLocation = pickup;
+                    booking.TotalCost = total;
+
+                    bookingRepo.Add(booking);
+                    vehicleRepo.UpdateStatus(vehicleId, "Lent");
+                    Console.WriteLine($"Booking created. Total: {total}");
+                    break;
                 }
+                case "3":
+                {
+                    var bookingRepo = new BookingRepository();
+                    var vehicleRepo = new VehicleRepository();
+                    
+                    Console.Write("Enter Booking ID: ");
+                    int id = int.Parse(Console.ReadLine());
+                    var booking = bookingRepo.GetById(id);
+                    if (booking != null)
+                    {
+                        bookingRepo.Delete(id);
+                        vehicleRepo.UpdateStatus(booking.VehicleId, "Available");
+                        Console.WriteLine("Booking cancelled.");
+                    }
+                    break;
+                }
+                case "4":
+                    return;
             }
-            else if (choice == "4") break;
         }
     }
 }
